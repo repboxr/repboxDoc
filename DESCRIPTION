@@ -1,11 +1,12 @@
 Package: repboxDoc
 Type: Package
-Title: What the Package Does (Title Case)
+Title: Heuristically prepare PDF or HTML articles or appendices for further repbox analysis
 Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
+Author: Sebastian Kranz
+Maintainer: Sebastian Kranz <sebastian.kranz@uni-ulm.de>
 Description: More about what it does (maybe more than one line)
     Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+License: GPL >= 2.0
 Encoding: UTF-8
 LazyData: true
+Depends: repboxUtils, restorepoint, stringi, dplyr, stringtools, ExtractSciTab
