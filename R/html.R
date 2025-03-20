@@ -68,8 +68,8 @@ rdoc_html_to_parts = function(doc_dir) {
   tab_df$url_org_tab = NA_character_
   tab_df$start_page = NA
 
-  saveRDS(text_df, file.path(doc_dir, "text_parts.Rds"))
-  saveRDS(tab_df, file.path(doc_dir, "tabs.Rds"))
+  saveRDS(text_df, file.path(doc_dir, "part_df.Rds"))
+  saveRDS(tab_df, file.path(doc_dir, "tab_df.Rds"))
   writeLines(text_df$text, file.path(doc_dir,"art.txt"))
 }
 
@@ -77,8 +77,8 @@ rdoc_html_to_parts = function(doc_dir) {
 # TO DO: Move footnotes to end of df:
 # This seems useful for mapping table references since footnotes
 # may refer to new tables. The idea is that footnotes are mainly self-contained.
-text_df_standardize = function(df, reduce_cols = TRUE) {
-  restore.point("text_df_standardize")
+html_text_part_df_standardize = function(df, reduce_cols = TRUE) {
+  restore.point("html_text_part_df_standardize")
   df = text_df_add_section_cols(df)
 
   # Move footnotes to back, so that they don't confuse table references etc
@@ -101,7 +101,7 @@ text_df_standardize = function(df, reduce_cols = TRUE) {
   cols = c("partind","type","type_counter","tag","sec1","sec2","sec3", "text", ".ROW")
   abs_row = which(df$type=="abs")[1]
   sec_row = which(startsWith(df$type,"sec"))[1]
-  if (!is.null(abs_row) & !is.null(sec_row)) {
+  if (!is.empty(abs_row) & !is.empty(sec_row)) {
     if (sec_row > abs_row) {
       df$sec1[(abs_row):(sec_row-1)] = 0
     }

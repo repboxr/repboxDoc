@@ -1,8 +1,28 @@
 example = function() {
   doc_dir = "~/repbox/projects_share/aeri_1_2_6/doc/art_pdf"
   doc_dir = "~/repbox/projects_share/jole_33_3_5/doc/art_html"
+  doc_dir = "~/repbox/projects_share/aeri_1_2_6/doc/app1_pdf"
+  doc_dir = "~/repbox/projects_share/aeri_1_2_6/doc/art_pdf"
+  doc_dir = "~/repbox/projects_share/aeri_1_2_6/doc/art_mocr"
+  doc_dir = "~/repbox/projects_share/aeri_1_2_6/doc/app1_mocr"
   rdoc_process(doc_dir)
   rstudioapi::filesPaneNavigate(doc_dir)
+
+  project_dirs = list.dirs("~/repbox/projects_share/", recursive = FALSE)
+
+  for (project_dir in project_dirs) {
+    repbox_process_all_docs(project_dir, just_doc_form = "mocr")
+  }
+
+  # library(rmistral)
+  # rmistral::set_mistral_api_key(file = "~/repbox/gemini/mistral_api_key.txt")
+  # ocr = rmistral::mistral_ocr(file = "~/repbox/projects_share/aeri_1_2_6/doc/app1_pdf/pdf/10528.pdf")
+  # saveRDS(ocr, "~/repbox/projects_share/aeri_1_2_6/doc/app1_mocr/ocr.Rds")
+
+
+  dirs = list.dirs("~/repbox/projects_share")
+  dirs = dirs[has.substr(dirs,"doc/app")]
+  head(dirs)
 }
 
 repbox_process_all_docs = function(project_dir, steps= rdoc_steps_from(TRUE), opts = rdoc_options(), overwrite=TRUE, just_doc_type = NULL, just_doc_form=NULL, verbose=TRUE) {
@@ -37,7 +57,7 @@ rdoc_process = function(doc_dir, steps= rdoc_steps_from(TRUE), opts = rdoc_optio
   } else {
     stop(paste0("Cannot process ", doc_dir,". Documents of form ", doc_form, " are not yet implemented."))
   }
-  res
+  invisible(res)
 }
 
 rdoc_is_processed = function(doc_dir) {

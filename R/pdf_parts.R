@@ -17,7 +17,7 @@ rdoc_pdf_pages_to_parts = function(doc_dir, journ = rdoc_guess_journ(doc_dir), v
   restore.point("rdoc_pdf_pages_to_parts")
 
   if (is.null(page_df)) {
-    pages_file = file.path( doc_dir, "txt_pages.Rds")
+    pages_file = file.path( doc_dir, "page_df.Rds")
     if (!file.exists(pages_file)) return(NULL)
     page_df = readRDS(pages_file)
   }
@@ -91,13 +91,13 @@ rdoc_pdf_pages_to_parts = function(doc_dir, journ = rdoc_guess_journ(doc_dir), v
   line_df = line_df_find_junk_lines(line_df, journ, opts=opts)
 
   # Now transform to parts df
-  parts_df = line_df_to_parts_df(line_df, fn_df)
-  saveRDS(parts_df, file.path(doc_dir, "text_parts.Rds"))
+  part_df = line_df_to_part_df(line_df, fn_df)
+  saveRDS(part_df, file.path(doc_dir, "part_df.Rds"))
   invisible()
 }
 
-line_df_to_parts_df = function(line_df, fn_df, verbose=TRUE) {
-  restore.point("line_df_to_parts_df")
+line_df_to_part_df = function(line_df, fn_df, verbose=TRUE) {
+  restore.point("line_df_to_part_df")
   line_df = filter(line_df,type %in% c("","sec1","bib","app"))
 
   # We remove Footnotes from text that are at the
@@ -117,7 +117,7 @@ line_df_to_parts_df = function(line_df, fn_df, verbose=TRUE) {
   sec_nums = unique(line_df$sec_num)
 
   sec_num = 0
-  parts_df = lapply(sec_nums, function(sec_num) {
+  part_df = lapply(sec_nums, function(sec_num) {
     restore.point("hskjdhjkshfjhskfh")
     lines = which(line_df$sec_num==sec_num)
     type = line_df$type[lines[1]]
@@ -146,23 +146,23 @@ line_df_to_parts_df = function(line_df, fn_df, verbose=TRUE) {
       par_tibble
     )
   }) %>% bind_rows()
-  parts_df$type_counter = 0
-  for (type in unique(parts_df$type)) {
-    rows = which(parts_df$type == type)
-    parts_df$type_counter[rows] = seq_along(rows)
+  part_df$type_counter = 0
+  for (type in unique(part_df$type)) {
+    rows = which(part_df$type == type)
+    part_df$type_counter[rows] = seq_along(rows)
   }
 
   if (NROW(fn_df)>0) {
-    fn_sec = max(parts_df$sec1)+1
-    parts_df = bind_rows(
-      parts_df,
+    fn_sec = max(part_df$sec1)+1
+    part_df = bind_rows(
+      part_df,
       transmute(fn_df, type="note", text=trimws(txt), sec1=fn_sec, type_counter=seq_len(n()))
     )
     if (verbose) cat(paste0("\n    Found ", NROW(fn_df)," footnotes from ", first(fn_df$footind), " to ", last(fn_df$footind),"."))
   }
-  parts_df$partind = seq_rows(parts_df)
-  parts_df$nchar = nchar(parts_df$text)
-  parts_df
+  part_df$partind = seq_rows(part_df)
+  part_df$nchar = nchar(part_df$text)
+  part_df
 }
 
 combine_short_paragraphs = function(para, min_words=20) {

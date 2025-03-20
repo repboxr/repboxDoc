@@ -118,7 +118,7 @@ rdoc_tab_phrase_analysis = function(doc_dir, tab_df=rdoc_load_tab_df(doc_dir), p
 
 }
 
-rdoc_text_parts_phrase_analysis = function(doc_dir, text_df=rdoc_load_text_parts(doc_dir), p_def=get_phrases_def()) {
+rdoc_text_parts_phrase_analysis = function(doc_dir, text_df=rdoc_load_part_df(doc_dir), p_def=get_phrases_def()) {
   restore.point("rdoc_text_parts_phrase_analysis")
   txt = merge.lines(text_df$text)
 

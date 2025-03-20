@@ -21,7 +21,7 @@ example = function() {
 rdoc_pdf_to_txt_pages = function(doc_dir, overwrite = FALSE, save_art_text = TRUE) {
   restore.point("rdoc_pdf_to_txt_pages")
   pdf_file = rdoc_pdf_file(doc_dir)
-  out_file = file.path(doc_dir, "txt_pages.Rds")
+  out_file = file.path(doc_dir, "page_df.Rds")
   if (file.exists(out_file) & !overwrite) return()
 
   page_li = lapply(pdf_file, pdf_to_txt_pages)

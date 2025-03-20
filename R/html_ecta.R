@@ -66,7 +66,7 @@ ecta_parse_html = function(doc_dir, html = rvest::read_html(html.file), html.fil
   df = df[!dupl | df$type=="note",]
 
   df = remove_nested_html_elements(df, which(df$tag == "div"))
-  df = text_df_standardize(df)
+  df = html_text_part_df_standardize(df)
   nodes = nodes[df$.ROW]
 
 

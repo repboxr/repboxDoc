@@ -1,6 +1,12 @@
 example = function() {
   project_dir = "~/repbox/projects_share/aejapp_1_2_4"
+  project_dir = "~/repbox/projects_share/aeri_1_2_6"
+
   repbox_process_all_docs(project_dir, just_doc_form = "mocr")
+
+
+  repbox_process_all_docs(project_dir, just_doc_type="art", just_doc_form = "mocr")
+  rstudioapi::filesPaneNavigate(project_dir)
 }
 
 change_file_ext = function(file, new_ext) {
@@ -9,7 +15,7 @@ change_file_ext = function(file, new_ext) {
 
 rdoc_mocr_process = function(doc_dir, ...) {
   restore.point("rdoc_mocr_process")
-  stop()
+  #stop()
   ocr = readRDS(file.path(doc_dir, "ocr.Rds"))
   pages = ocr$pages
   if (NROW(pages)==0) return(NULL)
@@ -17,9 +23,9 @@ rdoc_mocr_process = function(doc_dir, ...) {
   library(rmarkdown)
   library(rmistral)
 
-  pages_dir = file.path(doc_dir, "pages")
-  if (!dir.exists(pages_dir)) dir.create(pages_dir)
-  rmistral::mistral_ocr_save_md(ocr, file.path(pages_dir,"page.md"),by_page = TRUE, overwrite=TRUE,save_images = FALSE)
+  #pages_dir = file.path(doc_dir, "pages")
+  #if (!dir.exists(pages_dir)) dir.create(pages_dir)
+  #rmistral::mistral_ocr_save_md(ocr, file.path(pages_dir,"page.md"),by_page = TRUE, overwrite=TRUE,save_images = FALSE)
 
   num_pages = NROW(pages)
   page_marker = paste0("<p>§°pAGe°§</p>\n")
@@ -59,14 +65,15 @@ rdoc_mocr_process = function(doc_dir, ...) {
     )
 
   page_df$num_table_frac = stri_count_fixed(page_df$html, "<table")
+  saveRDS(page_df, file.path(doc_dir, "page_df.Rds"))
 
-  part_df = mocr_parse_html_parts(page_df)
 
   html = paste0(page_df$html, collapse = "\n")
-  saveRDS(page_df, file.path(doc_dir, "page_df.Rds"))
-  tab_df = mistral_html_extract_tables(html)
+  tab_df = mocr_html_extract_tables(html)
   saveRDS(tab_df, file.path(doc_dir, "tab_df.Rds"))
 
+  part_df = mocr_parse_html_parts(page_df)
+  saveRDS(part_df, file.path(doc_dir, "part_df.Rds"))
 
 
   md_file = paste0(doc_dir,"/art.md")
@@ -75,8 +82,9 @@ rdoc_mocr_process = function(doc_dir, ...) {
   my_pandoc(md_file,html_file,c("--wrap=preserve", "--mathjax", "--standalone"))
   #pandoc_convert(md_file,output=html_file, options = c("--wrap=preserve", "--mathjax", "--standalone"))
 
-  tab_html = cells_to_tabhtml(bind_rows(tab_df$cell_df))
-  rai_write_all_tables_html(tab_html,file.path(doc_dir, "tabs.html"))
+  #tab_html = cells_to_tabhtml(bind_rows(tab_df$cell_df))$tab_html
+  tab_html = tab_df$tabhtml
+  rai_write_all_tables_html(tab_df,file.path(doc_dir, "tabs.html"))
   writeUtf8(tab_html, file.path(doc_dir, "tabs.html"))
   #rstudioapi::filesPaneNavigate(doc_dir)
 
@@ -84,8 +92,8 @@ rdoc_mocr_process = function(doc_dir, ...) {
 }
 
 
-mistral_html_extract_tables = function(html) {
-  restore.point("mistral_html_extract_tables")
+mocr_html_extract_tables = function(html) {
+  restore.point("mocr_html_extract_tables")
   txt = html
   library(repboxArt)
 
@@ -137,6 +145,8 @@ mistral_html_extract_tables = function(html) {
     ) %>%
     ungroup()
 
+
+
   # Merge tables
   merge_df = tab_df %>%
     filter(num_panels > 1)
@@ -160,6 +170,22 @@ mistral_html_extract_tables = function(html) {
   for (i in 1:NROW(tab_df$cell_df)) {
     tab_df$cell_df[[i]]$tabid = tab_df$tabid[[i]]
   }
+
+  # Correct tables
+  tab_df$cell_df = lapply(tab_df$cell_df, function(cell_df) {
+    restore.point("shfjhsfk")
+    cell_df$content = cell_df$inner_html
+    row_df = split_html_latex_multiline(cell_df$content)
+    cell_df = cell_df_split_rows_and_cols(cell_df, row_df)
+    cell_df$text = cell_df$content
+    cell_df = cells_add_cell_base(cell_df,add_tests = TRUE, split_multi_num = TRUE)
+    cell_df
+  })
+
+
+  tab_df$tabhtml = sapply(tab_df$cell_df, cell_df_to_simple_tabhtml)
+
+
   #tab_df$tabhtml = sapply(tab_df$cell_df, cell_df_to_simple_tabhtml)
   tab_df
 }
@@ -233,6 +259,6 @@ mocr_parse_html_parts = function(page_df, journ=NULL) {
   df$.ROW = 1:NROW(df)
   dupl = duplicated(select(df, tag, type, text))
   df = df[!dupl,]
-  df = text_df_standardize(df)
+  df = html_text_part_df_standardize(df)
   df
 }

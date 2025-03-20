@@ -3,6 +3,7 @@ example = function(){
   doc_dir = "~/repbox/projects_reg/testart"
   doc_dir = "~/repbox/projects_reg/aejapp_3_1_3"
   doc_dir = "~/repbox/projects_reg/aejapp_3_2_2"
+
   rdoc_extract_raw_tabs(doc_dir, overwrite=TRUE, by_page=FALSE)
 }
 
@@ -12,7 +13,7 @@ rdoc_pdf_extract_tabs = function(doc_dir, overwrite=!FALSE, by_page=FALSE, page_
   if (file.exists(tab_file) & !overwrite) return(list())
 
   if (is.null(page_df)) {
-    page_df = rdoc_load_txt_pages(doc_dir)
+    page_df = rdoc_load_page_df(doc_dir)
   }
   if (is.null(page_df)) {
     cat("\nNo pages extracted for document ", doc_dir,"\n")
@@ -63,7 +64,7 @@ rdoc_pdf_extract_raw_tabs = function(doc_dir, overwrite=FALSE, by_page=FALSE, pa
   if (file.exists(raw_file) & !overwrite) return(readRDS(raw_file))
 
   if (is.null(page_df)) {
-    page_df = rdoc_load_txt_pages(doc_dir)
+    page_df = rdoc_load_page_df(doc_dir)
   }
   if (is.null(page_df)) {
     cat("\nNo pages extracted for article in ", doc_dir,"\n")

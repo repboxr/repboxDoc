@@ -1,5 +1,35 @@
-repbox_doc_dirs = function(project_dir) {
-  list.dirs(file.path(project_dir, "doc"),recursive = FALSE)
+repbox_doc_types = function(project_dir) {
+  doc_dirs = repbox_doc_dirs(project_dir)
+  unique(rdoc_type(doc_dirs))
+}
+
+repbox_art_pdf_file = function(project_dir) {
+  doc_dirs = repbox_doc_dirs(project_dir, "pdf","art")
+  rdoc_pdf_file(doc_dirs)
+}
+
+repbox_all_pdf_file = function(project_dir) {
+  doc_dirs = repbox_doc_dirs(project_dir, "pdf")
+  rdoc_pdf_file(doc_dirs)
+}
+
+repbox_pdf_file = function(project_dir, doc_type=NULL) {
+  doc_dirs = repbox_doc_dirs(project_dir, "pdf", doc_type=doc_type)
+  rdoc_pdf_file(doc_dirs)
+}
+
+
+repbox_doc_dirs = function(project_dir, doc_form=NULL, doc_type=NULL) {
+  doc_dirs = list.dirs(file.path(project_dir, "doc"),recursive = FALSE)
+  if (!is.null(doc_form)) {
+    doc_forms = rdoc_form(doc_dirs)
+    doc_dirs = doc_dirs[doc_forms %in% doc_form]
+  }
+  if (!is.null(doc_type)) {
+    doc_types = rdoc_type(doc_dirs)
+    doc_dirs = doc_dirs[doc_types %in% doc_type]
+  }
+  doc_dirs
 }
 
 doc_dir_to_project_dir = function(doc_dir) {
@@ -13,7 +43,7 @@ doc_dir_to_artid = function(doc_dir) {
 
 rdoc_tabs_file = function(doc_dir) {
   restore.point("rdoc_load_tabs")
-  file.path(doc_dir, "tabs.Rds")
+  file.path(doc_dir, "tab_df.Rds")
 }
 
 rdoc_load_tabs = function(doc_dir) {
@@ -22,6 +52,7 @@ rdoc_load_tabs = function(doc_dir) {
   if (file.exists(file)) return(readRDS(file))
   return(NULL)
 }
+
 
 
 rdoc_pdf_file = function(doc_dir, full.names=TRUE) {
@@ -42,22 +73,22 @@ rdoc_has_html = function(doc_dir) {
 }
 
 
-rdoc_load_txt_pages = function(doc_dir) {
-  restore.point("rdoc_load_txt_pages")
-  out_file = file.path(doc_dir,"txt_pages.Rds")
+rdoc_load_page_df = function(doc_dir) {
+  restore.point("rdoc_load_page_df")
+  out_file = file.path(doc_dir,"page_df.Rds")
   if (!file.exists(out_file)) return(NULL)
   readRDS(out_file)
 }
 
-rdoc_load_text_parts = function(doc_dir) {
-  file = file.path(get_rdoc_route_dir(doc_dir),"text_parts.Rds")
+rdoc_load_part_df = function(doc_dir) {
+  file = file.path(get_rdoc_route_dir(doc_dir),"part_df.Rds")
   if (!file.exists(file)) return(NULL)
   text_df = readRDS(file)
   text_df
 }
 
 rdoc_load_tab_df = function(doc_dir) {
-  file = file.path(get_rdoc_route_dir(doc_dir), "arttab.Rds")
+  file = file.path(get_rdoc_route_dir(doc_dir), "tab_df.Rds")
   if (file.exists(file)) return(readRDS(file))
 
   return(NULL)
