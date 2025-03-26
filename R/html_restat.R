@@ -3,7 +3,7 @@
 example = function() {
   library(rvest)
   doc_dir = "~/repbox/projects_reg/testart"
-  html.file = list.files(file.path(doc_dir, "art","html"),glob2rx("restat_*.html"), full.names = TRUE)[1]
+  html.file = list.files(file.path(doc_dir,"html"),glob2rx("restat_*.html"), full.names = TRUE)[1]
   journ = str.left.of(basename(html.file),"_")
   html = rvest::read_html(html.file)
 

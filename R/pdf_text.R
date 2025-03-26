@@ -36,7 +36,7 @@ rdoc_pdf_to_txt_pages = function(doc_dir, overwrite = FALSE, save_art_text = TRU
 
   saveRDS(page_df, out_file)
   if (save_art_text & NROW(page_df)>0) {
-    writeLines(page_df$txt, file.path(doc_dir,"art.txt"))
+    writeLines(page_df$txt, file.path(doc_dir,"doc.txt"))
   }
   invisible(page_df)
 }

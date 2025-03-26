@@ -2,12 +2,16 @@ example = function() {
   doc_dir = "~/repbox/projects_share/aeri_1_2_6/doc/art_pdf"
   doc_dir = "~/repbox/projects_share/jole_33_3_5/doc/art_html"
   doc_dir = "~/repbox/projects_share/aeri_1_2_6/doc/app1_pdf"
-  doc_dir = "~/repbox/projects_share/aeri_1_2_6/doc/art_pdf"
   doc_dir = "~/repbox/projects_share/aeri_1_2_6/doc/art_mocr"
   doc_dir = "~/repbox/projects_share/aeri_1_2_6/doc/app1_mocr"
+  doc_dir = "~/repbox/projects_share/ecta_84_2_6/doc/art_mocr"
+  project_dir = "/home/rstudio/repbox/projects_share//pandp_108_1_111"
+  repbox_process_all_docs(project_dir, just_doc_form = "mocr")
+
   rdoc_process(doc_dir)
   rstudioapi::filesPaneNavigate(doc_dir)
 
+  library(repboxDoc)
   project_dirs = list.dirs("~/repbox/projects_share/", recursive = FALSE)
 
   for (project_dir in project_dirs) {
@@ -43,20 +47,32 @@ repbox_process_all_docs = function(project_dir, steps= rdoc_steps_from(TRUE), op
   }
 }
 
-rdoc_process = function(doc_dir, steps= rdoc_steps_from(TRUE), opts = rdoc_options(), overwrite = TRUE) {
+rdoc_steps_from = function(pages = FALSE, tables = pages, parts = pages, sentences = parts, refs = sentences) {
+  as.list(sys.frame(sys.parent(0)))
+}
+
+rdoc_process = function(doc_dir, steps= rdoc_steps_from(TRUE), opts = rdoc_options(), overwrite = TRUE, cache = new.env(parent=emptyenv())) {
+  restore.point("rdoc_process")
   if (!overwrite) {
     if (rdoc_is_processed(doc_dir)) return(invisible())
   }
   doc_form = rdoc_form(doc_dir)
   if (doc_form == "pdf") {
-    res = rdoc_pdf_process(doc_dir, steps, opts)
+    res = rdoc_pdf_process(doc_dir, steps, opts, cache=cache)
   } else if (doc_form == "html") {
-    res = rdoc_html_process(doc_dir, steps, opts)
+    res = rdoc_html_process(doc_dir, steps, opts,cache=cache)
   } else if (doc_form == "mocr") {
-    res = rdoc_mocr_process(doc_dir, steps, opts)
+    res = rdoc_mocr_process(doc_dir, steps, opts, cache=cache)
   } else {
     stop(paste0("Cannot process ", doc_dir,". Documents of form ", doc_form, " are not yet implemented."))
   }
+  if (steps$sentences) {
+    rdoc_sent_df(doc_dir, cache=cache)
+  }
+  if (steps$refs) {
+    rdoc_tab_fig_refs(doc_dir, cache=cache)
+  }
+
   invisible(res)
 }
 
@@ -77,17 +93,15 @@ rdoc_options = function(stop_on_error = TRUE, ...) {
   as.list(sys.frame(sys.parent(0)))
 }
 
-rdoc_steps_from = function(pages = FALSE, tables = pages, parts = pages) {
-  as.list(sys.frame(sys.parent(0)))
-}
 
-rdoc_pdf_process = function(doc_dir, steps= rdoc_steps_from(TRUE), opts = rdoc_options()) {
+rdoc_pdf_process = function(doc_dir, steps= rdoc_steps_from(TRUE), opts = rdoc_options(), cache=NULL) {
   restore.point("rdoc_pdf_process")
   project_dir = doc_dir_to_project_dir(doc_dir)
   repbox_set_problem_options(project_dir,fail_action = "msg")
   page_df = tab_df = NULL
   if (steps$pages) {
     page_df = rdoc_pdf_to_txt_pages(doc_dir)
+    if (!is.null(cache)) cache$page_df = page_df
   }
   if (steps$tables) {
     if (opts$stop_on_error) {
@@ -95,6 +109,7 @@ rdoc_pdf_process = function(doc_dir, steps= rdoc_steps_from(TRUE), opts = rdoc_o
     } else {
       tab_df = try(rdoc_pdf_extract_tabs(doc_dir))
     }
+    if (!is.null(cache)) cache$tab_df = tab_df
   }
 
 
@@ -104,19 +119,20 @@ rdoc_pdf_process = function(doc_dir, steps= rdoc_steps_from(TRUE), opts = rdoc_o
     } else {
       part_df = try(rdoc_pdf_pages_to_parts(doc_dir, opts=opts))
     }
+    if (!is.null(cache)) cache$part_df = part_df
+
   }
 }
 
-rdoc_html_process = function(doc_dir,  steps= rdoc_steps_from(TRUE), opts = rdoc_options()) {
+rdoc_html_process = function(doc_dir,  steps= rdoc_steps_from(TRUE), opts = rdoc_options(), cache=NULL) {
   restore.point("rdoc_html_process")
   project_dir = doc_dir_to_project_dir(doc_dir)
   repbox_set_problem_options(project_dir,fail_action = "msg")
   if (opts$stop_on_error) {
-    res = rdoc_html_to_parts(doc_dir)
+    res = rdoc_html_to_parts(doc_dir, cache=cache)
   } else {
-    res = try(rdoc_html_to_parts(doc_dir))
+    res = try(rdoc_html_to_parts(doc_dir, cache=cache))
   }
-
 }
 
 

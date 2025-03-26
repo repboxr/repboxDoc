@@ -9,4 +9,4 @@ Description: More about what it does (maybe more than one line)
 License: GPL >= 2.0
 Encoding: UTF-8
 LazyData: true
-Depends: repboxUtils, restorepoint, stringi, dplyr, stringtools, ExtractSciTab, repboxTableTools
+Depends: repboxUtils, restorepoint, stringi, tidyr, dplyr, stringtools, ExtractSciTab, repboxTableTools

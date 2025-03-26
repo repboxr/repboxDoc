@@ -6,7 +6,7 @@
 example = function() {
   library(rvest)
   doc_dir = "~/repbox/projects_reg/testart"
-  html_file = list.files(file.path(doc_dir, "art","html"),glob2rx("jpe_*.html"), full.names = TRUE)[1]
+  html_file = list.files(file.path(doc_dir,"html"),glob2rx("jpe_*.html"), full.names = TRUE)[1]
   journ = str.left.of(basename(html_file),"_")
 
   # More robust encoding detection
@@ -21,7 +21,7 @@ example = function() {
   rstudioapi::filesPaneNavigate(doc_dir)
 }
 
-rdoc_html_to_parts = function(doc_dir) {
+rdoc_html_to_parts = function(doc_dir, cache=NULL) {
   restore.point("rdoc_html_to_parts")
   journ = rdoc_guess_journ(doc_dir)
   html_file = rdoc_html_file(doc_dir)
@@ -51,6 +51,7 @@ rdoc_html_to_parts = function(doc_dir) {
 
   text_df = res$text_df; tab_df = res$tab_df
 
+
   # Some general adaptions
   text_df$nchar = nchar(text_df$text)
 
@@ -70,7 +71,10 @@ rdoc_html_to_parts = function(doc_dir) {
 
   saveRDS(text_df, file.path(doc_dir, "part_df.Rds"))
   saveRDS(tab_df, file.path(doc_dir, "tab_df.Rds"))
-  writeLines(text_df$text, file.path(doc_dir,"art.txt"))
+  if (!is.null(cache)) cache$tab_df = tab_df
+  if (!is.null(cache)) cache$part_df = text_df
+
+  writeLines(text_df$text, file.path(doc_dir,"doc.txt"))
 }
 
 

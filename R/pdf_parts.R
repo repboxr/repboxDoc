@@ -13,13 +13,11 @@ example = function() {
   rstudioapi::filesPaneNavigate(doc_dir)
 }
 
-rdoc_pdf_pages_to_parts = function(doc_dir, journ = rdoc_guess_journ(doc_dir), verbose=TRUE, opts=rdoc_opts(), page_df = NULL, tab_df = NULL) {
+rdoc_pdf_pages_to_parts = function(doc_dir, journ = rdoc_guess_journ(doc_dir), verbose=TRUE, opts=rdoc_opts(), page_df = NULL, tab_df = NULL, cache=NULL) {
   restore.point("rdoc_pdf_pages_to_parts")
 
   if (is.null(page_df)) {
-    pages_file = file.path( doc_dir, "page_df.Rds")
-    if (!file.exists(pages_file)) return(NULL)
-    page_df = readRDS(pages_file)
+    page_df = rdoc_load_page_df(doc_dir, cache)
   }
 
   # Try to load meta data for article

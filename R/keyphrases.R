@@ -1,11 +1,8 @@
 example = function() {
   make_phrases_def()
   p_def = get_phrases_def()
-  doc_dir = "~/repbox/projects_reg/testart"
-  doc_dir = "~/repbox/projects_reg/aejapp_3_2_2"
-  doc_dir = "~/repbox/projects_reg/aejapp_3_1_3"
-
-  rdoc_pdf_pages_to_parts(doc_dir)
+  doc_dir = "~/repbox/projects_share/aeri_1_2_6/doc/art_pdf"
+  doc_dir = "~/repbox/projects_share/aeri_1_2_6/doc/art_mocr"
   rdoc_phrase_analysis(doc_dir)
 
   rstudioapi::filesPaneNavigate(doc_dir)
@@ -15,16 +12,13 @@ example = function() {
 
 }
 
-rdoc_phrase_analysis = function(doc_dir) {
+rdoc_phrase_analysis = function(doc_dir, cache=NULL) {
   restore.point("rdoc_phrase_analysis")
-  res_text = rdoc_text_parts_phrase_analysis(doc_dir)
-  res_tab = rdoc_tab_phrase_analysis(doc_dir)
-
-  refs = res_text[c("tab_ref","fig_ref","col_ref")]
-  saveRDS(refs, file.path(doc_dir, "art","refs_tab_fig_col.Rds") )
+  res_text = rdoc_text_parts_phrase_analysis(doc_dir, cache=cache)
+  res_tab = rdoc_tab_phrase_analysis(doc_dir, cache=cache)
 
   res = list(text = res_text$phrases_loc, tab=res_tab$phrases_loc)
-  saveRDS(res, file.path(doc_dir, "art","phrases.Rds"))
+  saveRDS(res, file.path(doc_dir,"phrases.Rds"))
 
 
   # Save table type indicators in repdb
@@ -67,7 +61,7 @@ rdoc_phrase_analysis = function(doc_dir) {
 
 }
 
-rdoc_tab_phrase_analysis = function(doc_dir, tab_df=rdoc_load_tab_df(doc_dir), p_def = get_phrases_def()) {
+rdoc_tab_phrase_analysis = function(doc_dir, tab_df=rdoc_load_tab_df(doc_dir, cache=cache), p_def = get_phrases_def(), cache=NULL) {
   restore.point("rdoc_tab_phrase_analysis")
 
   n = NROW(tab_df)
@@ -118,25 +112,25 @@ rdoc_tab_phrase_analysis = function(doc_dir, tab_df=rdoc_load_tab_df(doc_dir), p
 
 }
 
-rdoc_text_parts_phrase_analysis = function(doc_dir, text_df=rdoc_load_part_df(doc_dir), p_def=get_phrases_def()) {
+rdoc_text_parts_phrase_analysis = function(doc_dir, text_df=rdoc_load_part_df(doc_dir, cache), p_def=get_phrases_def(), sent_loc = rdoc_load_sent_df(doc_dir, cache),   ref_li = rdoc_load_tab_fig_refs(doc_dir, cache), cache=NULL
+) {
   restore.point("rdoc_text_parts_phrase_analysis")
   txt = merge.lines(text_df$text)
-
-
-  sent_loc = rdoc_locate_sentences(txt)
-
   # Keyword phrases
   loc = txt_phrase_analysis(txt, sent_loc=sent_loc)
   loc
   if (is.null(loc)) return(NULL)
 
+  if (!has_col(text_df,"nchar")) {
+    text_df$nchar = nchar(text_df$text)
+  }
   parts_loc = text_parts_to_loc(text_df$nchar)
   loc$partind = map_loc_to_parent_loc(loc, parts_loc)
   loc$parttype = text_df$type[loc$partind]
   loc
 
   # References to table, figure or column
-  ref_li = rdoc_refs_analysis(txt, sent_loc=sent_loc,parts_loc = parts_loc)
+
   tab_ref = ref_li$tab_ref; col_ref = ref_li$col_ref; fig_ref = ref_li$fig_ref
 
 
@@ -191,60 +185,7 @@ rdoc_text_parts_phrase_analysis = function(doc_dir, text_df=rdoc_load_part_df(do
   c(list(phrases_loc = loc, tt_df=tt_df, coty_df=coty_df), ref_li)
 }
 
-rdoc_refs_analysis = function(txt,refs_types = c("tab","fig","col"), sent_loc=rdoc_locate_sentences(txt), parts_loc=NULL) {
-  restore.point("rdoc_refs_analysis")
-
-  tab_fig_loc = rdoc_locate_tab_fig_refs(txt)
-  col_loc = rdoc_locate_col_refs(txt)
-  tab_fig_loc$sentence = map_loc_to_parent_loc(tab_fig_loc, sent_loc)
-  col_loc$sentence = map_loc_to_parent_loc(col_loc, sent_loc)
-  tab_fig_loc$col = NA_integer_
-
-
-
-
-
-  loc = bind_rows(tab_fig_loc, col_loc) %>%
-    select(start, end,reftype = type, id = typeid, col=col, sentence, str=str) %>%
-    arrange(sentence, reftype!="tab", reftype != "figure", start)
-
-  if (!is.null(parts_loc)) {
-    loc$partind = map_loc_to_parent_loc(loc, parts_loc)
-  } else {
-    loc$partind = NA_integer_
-  }
-
-  # Let us find the closest preceding table reference
-  loc$prev_tab_row = cumsum(loc$reftype=="tab")
-  loc$prev_fig_row = cumsum(loc$reftype=="fig")
-  loc = loc %>%
-    group_by(prev_tab_row) %>%
-    mutate(
-      prev_tabid = ifelse(prev_tab_row == 0, NA_character_, first(id)),
-      prev_tab_sentence = ifelse(prev_tab_row == 0, NA_integer_, first(sentence)),
-      prev_tab_partind = ifelse(prev_tab_row == 0, NA_integer_, first(partind)),
-      prev_tab_start = ifelse(prev_tab_row == 0, NA_integer_, first(start))
-    ) %>%
-    ungroup()
-
-  tab_ref = filter(loc, reftype=="tab") %>%
-    select(start, end,reftype, tabid = id, sentence, partind, str)
-
-  fig_ref = filter(loc, reftype=="fig") %>%
-    select(start, end,reftype, figid = id, sentence, partind, str)
-
-  col_ref = filter(loc, reftype %in% c("col","cols")) %>%
-    mutate(tab_sent_dist = abs(prev_tab_sentence - sentence), tab_char_dist = abs(start-prev_tab_start)) %>%
-    select(start, end,reftype, col, tabid = prev_tabid,  sentence, partind,  tab_char_dist, tab_sent_dist, tab_sentence = prev_tab_sentence, tab_partind=prev_tab_partind, str)
-
-  if (NROW(col_ref)==0) {
-    col_ref$tabid = character(0)
-  }
-
-  list(tab_ref=tab_ref, fig_ref=fig_ref, col_ref=col_ref)
-}
-
-txt_phrase_analysis = function(txt, p_def = get_phrases_def(), sent_loc = rdoc_locate_sentences(txt),  add_sent_str = TRUE) {
+txt_phrase_analysis = function(txt, p_def = get_phrases_def(), sent_loc = locate_sentences_in_txt(txt),  add_sent_str = TRUE) {
   restore.point("txt_phrase_analysis")
   ltxt = tolower(txt)
 

@@ -15,33 +15,24 @@ change_file_ext = function(file, new_ext) {
 
 rdoc_mocr_process = function(doc_dir, ...) {
   restore.point("rdoc_mocr_process")
+  repboxUtils::repbox_set_problem_options(project_dir = doc_dir_to_project_dir(doc_dir))
   #stop()
   ocr = readRDS(file.path(doc_dir, "ocr.Rds"))
   pages = ocr$pages
-  if (NROW(pages)==0) return(NULL)
+  num_pages = NROW(pages)
+  if (num_pages==0) return(NULL)
 
   library(rmarkdown)
   library(rmistral)
+  pages = try(mocr_md_to_html_mono(doc_dir, ocr), silent=TRUE)
+  if (is(pages, "try-error")) {
+    cat("\nMonolithic pandoc conversion md to html did not work for ", doc_dir, ". Try page-by-page conversion\n")
+    pages = mocr_md_to_html_by_page(doc_dir, ocr)
+  }
 
-  #pages_dir = file.path(doc_dir, "pages")
-  #if (!dir.exists(pages_dir)) dir.create(pages_dir)
-  #rmistral::mistral_ocr_save_md(ocr, file.path(pages_dir,"page.md"),by_page = TRUE, overwrite=TRUE,save_images = FALSE)
 
-  num_pages = NROW(pages)
-  page_marker = paste0("<p>§°pAGe°§</p>\n")
-  page_marker_html = paste0("<p>\n§°pAGe°§\n</p>\n")
-  md = paste0(page_marker, pages$markdown, collapse="\n")
-  md_file = file.path(doc_dir, "doc_page_marker.md")
-  writeUtf8(md, md_file)
-  html_file = change_file_ext(md_file, "html")
-  my_pandoc(md_file,html_file, args = c("--wrap=preserve","--mathjax"))
-  html = merge.lines(readLines(html_file))
-  pos = stri_locate_all_fixed(html, page_marker_html)[[1]]
-  start_positions <- pos[, 2] + 1
-  end_positions   <- c(pos[-1, "start"] - 1, nchar(html))
-
-  pages$html = stri_sub(html, from = start_positions, to = end_positions)
   pages$page = 1:NROW(pages)
+
   page_df = pages[,c("page","markdown","html")]
   page_df = rename.cols(page_df, "markdown", "md")
   page_df$img_vec = lapply(pages$images, function(image_df) {
@@ -76,9 +67,9 @@ rdoc_mocr_process = function(doc_dir, ...) {
   saveRDS(part_df, file.path(doc_dir, "part_df.Rds"))
 
 
-  md_file = paste0(doc_dir,"/art.md")
-  rmistral::mistral_ocr_save_md(ocr, md_file,by_page = FALSE, overwrite=FALSE,save_images = TRUE)
-  html_file = paste0(doc_dir,"/art.html")
+  md_file = paste0(doc_dir,"/doc.md")
+  rmistral::mistral_ocr_save_md(ocr, md_file,by_page = FALSE, overwrite=TRUE,save_images = TRUE)
+  html_file = paste0(doc_dir,"/doc.html")
   my_pandoc(md_file,html_file,c("--wrap=preserve", "--mathjax", "--standalone"))
   #pandoc_convert(md_file,output=html_file, options = c("--wrap=preserve", "--mathjax", "--standalone"))
 
@@ -89,6 +80,58 @@ rdoc_mocr_process = function(doc_dir, ...) {
   #rstudioapi::filesPaneNavigate(doc_dir)
 
   return(invisible(list(ocr=ocr, page_df=page_df, tab_df=tab_df)))
+}
+
+mocr_md_to_html_mono = function(doc_dir, ocr) {
+  pages = ocr$pages
+  page_marker = paste0("<p>§°pAGe°§</p>")
+  page_marker_html = paste0("<p>\n§°pAGe°§\n</p>")
+  md = paste0(page_marker, pages$markdown, collapse="\n")
+  md_file = file.path(doc_dir, "doc_page_marker.md")
+  writeUtf8(md, md_file)
+  html_file = change_file_ext(md_file, "html")
+  my_pandoc(md_file,html_file, args = c("--wrap=preserve","--mathjax"))
+  html = merge.lines(readLines(html_file))
+  pos_md = stri_locate_all_fixed(md, page_marker)[[1]]
+
+  pos = stri_locate_all_fixed(html, page_marker_html)[[1]]
+  start_positions <- pos[, 2] + 1
+  end_positions   <- c(pos[-1, "start"] - 1, nchar(html))
+
+  pages$html = stri_sub(html, from = start_positions, to = end_positions)
+  pages
+
+}
+
+# This more robust function will be used if
+# mocr_md_to_html_mono does not work
+mocr_md_to_html_by_page = function(doc_dir, ocr) {
+  restore.point("mocr_md_to_html_by_page")
+  pages = ocr$pages
+  pages_dir = file.path(doc_dir, "pages")
+  if (!dir.exists(pages_dir)) dir.create(pages_dir)
+  end_marker = paste0("\n<p><endofpage></endofpage></p>")
+  end_marker_html = paste0("<p>[ \n]*<endofpage>")
+  p = 1
+  htmls = unlist(lapply(seq_len(NROW(pages)), function(p) {
+    md = paste0(pages$markdown[p], end_marker)
+    md_file = file.path(pages_dir, paste0("page",p,".md"))
+    writeUtf8(md, md_file)
+    html_file = change_file_ext(md_file, "html")
+    my_pandoc(md_file,html_file, args = c("--wrap=preserve","--mathjax"))
+    html = merge.lines(readLines(html_file))
+    pos = stri_locate_all_regex(html, end_marker_html)[[1]]
+    if (NROW(pos)>1) {
+      msg = paste0("Multiple end page markers found when convering mocr markdown page ", p, " of ", doc_dir, " to html.")
+      repbox_problem(msg, "mocr_md_html_multi_end",fail_action = "msg")
+    }
+    if (NROW(pos)>=1) {
+      html = stri_sub(html, 1,pos[1,1]-1)
+    }
+    html
+  }))
+  pages$html = htmls
+  pages
 }
 
 
@@ -118,7 +161,7 @@ mocr_html_extract_tables = function(html) {
     # title or panel titles should not be more than 1000 characters
     # filter(dist_to_next <= 1000) %>%
     mutate(
-      merge_above = lag(type)=="tab",
+      merge_above = is.true(lag(type)=="tab"),
       title_start = case_when(
         type == "tab" & lag(type) == "tab" ~ lag(end)+1L,
         type == "tab" & lag(type) == "tit" ~ lag(start),
@@ -145,6 +188,7 @@ mocr_html_extract_tables = function(html) {
     ) %>%
     ungroup()
 
+  # cat(substr(txt, tab_df$start[1], tab_df$end[1]))
 
 
   # Merge tables
@@ -185,6 +229,12 @@ mocr_html_extract_tables = function(html) {
 
   tab_df$tabhtml = sapply(tab_df$cell_df, cell_df_to_simple_tabhtml)
 
+  num_na = sum(is.na(tab_df$tabid))
+  if (num_na > 0) {
+    msg = paste0("mocr table extraction ommited ", num_na, " tables for which no tabid could be identified. ", NROW(tab_df)-num_na, " tables successfully extracted.")
+    repbox_problem(msg, type="mocr_na_tabid",fail_action = "msg")
+    tab_df = tab_df %>% filter(!is.na(tabid))
+  }
 
   #tab_df$tabhtml = sapply(tab_df$cell_df, cell_df_to_simple_tabhtml)
   tab_df
@@ -228,6 +278,7 @@ my_pandoc = function(input, output, args, stdout = FALSE, stderr=FALSE) {
   restore.point("my_pandoc")
   all_args = c(input, "-o", output, args)
   system2("pandoc", args = all_args, stdout = stdout, stderr = stderr)
+  #cat(paste0("\npandoc ", input, " -o ", output, " ", paste0(args, collapse=" ")))
 }
 
 

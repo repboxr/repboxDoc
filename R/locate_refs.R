@@ -1,5 +1,154 @@
+example = function() {
 
-rdoc_locate_sentences = function(txt) {
+  doc_dir = "~/repbox/projects_share/aeri_1_2_6/doc/art_pdf"
+  doc_dir = "~/repbox/projects_share/aeri_1_2_6/doc/art_mocr"
+  res = rdoc_tab_ref_text(doc_dir)
+  rdoc_sent_df(doc_dir)
+  rdoc_tab_fig_refs(doc_dir)
+  rstudioapi::filesPaneNavigate(doc_dir)
+}
+
+
+rdoc_tab_ref_text = function(doc_dir,tabid=NULL, ref_li = rdoc_load_ref_li(doc_dir, cache), part_df=rdoc_load_part_df(doc_dir, cache=NULL), parts_pre=1, parts_post=2, sep_str = "\n[...]\n", cache=NULL) {
+  restore.point("rdoc_tab_ref_text")
+  tab_ref = ref_li$tab_ref
+  if (is.null(tabid)) tabid = unique(tab_ref$tabid)
+  if (length(tabid)>1) {
+    res = bind_rows(lapply(tabid, function(tid) {
+      rdoc_tab_ref_text(doc_dir,tid, ref_li, part_df, parts_pre, parts_post, sep_str, cache)
+    }))
+    return(res)
+  }
+  restore.point("rdoc_tab_ref_text_inner")
+
+  partinds = org_partinds = tab_ref$partind[tab_ref$tabid == tabid]
+  for (i in setdiff((-parts_pre):parts_post, 0)) {
+    partinds = union(partinds, partinds+1)
+  }
+  partinds = sort(partinds)
+  txt = part_df$text[partinds]
+  add_sep = is.true(lead(partinds)==partinds+1)
+  txt[add_sep] = paste0(txt[add_sep], sep_str)
+
+  tibble(tabid=tabid, num_refs = length(org_partinds), num_parts = length(partinds), parts_pre = parts_pre, parts_post=parts_post, text =  paste0(txt, collapse="\n"))
+
+
+}
+
+
+
+rdoc_sent_df = function(doc_dir, part_df = rdoc_load_part_df(doc_dir, cache), save=TRUE, cache=NULL) {
+  txt = merge.lines(part_df$text)
+
+  sent_loc = locate_sentences_in_txt(txt)
+
+  if (!has_col(part_df,"nchar")) {
+    part_df$nchar = nchar(part_df$text)
+  }
+  parts_loc = text_parts_to_loc(part_df$nchar)
+  sent_loc$partind = map_loc_to_parent_loc(sent_loc, parts_loc)
+  sent_loc$parttype = part_df$type[sent_loc$partind]
+  if (save) {
+    saveRDS(sent_loc, file.path(doc_dir, "sent_df.Rds"))
+  }
+  if (!is.null(cache)) cache$sent_df = sent_loc
+
+  invisible(sent_loc)
+}
+
+
+rdoc_tab_fig_refs = function(doc_dir, sent_df = rdoc_load_sent_df(doc_dir, cache), part_df = rdoc_load_part_df(doc_dir, cache), save=TRUE, cache=NULL) {
+  restore.point("rdoc_tab_fig_refs")
+  # References to table, figure or column
+  txt = paste0(part_df$text, collapse = "\n")
+  ref_li = rdoc_refs_analysis(txt, sent_loc=sent_df)
+  if (save) {
+    saveRDS(ref_li, file.path(doc_dir, "ref_li.Rds"))
+  }
+  if (!is.null(cache)) cache$ref_li = ref_li
+
+  invisible(ref_li)
+}
+
+
+rdoc_refs_analysis = function(txt,refs_types = c("tab","fig","col"), sent_loc=locate_sentences_in_txt(txt), parts_loc=NULL) {
+  restore.point("rdoc_refs_analysis")
+
+  tab_fig_loc = locate_tab_fig_refs_in_txt(txt)
+  col_loc = locate_col_refs_in_txt(txt)
+  tab_fig_loc$sentence = map_loc_to_parent_loc(tab_fig_loc, sent_loc)
+  col_loc$sentence = map_loc_to_parent_loc(col_loc, sent_loc)
+  tab_fig_loc$col = NA_integer_
+
+
+
+
+
+  loc = bind_rows(tab_fig_loc, col_loc) %>%
+    select(start, end,reftype = type, id = typeid, col=col, sentence, str=str) %>%
+    arrange(sentence, reftype!="tab", reftype != "figure", start)
+
+  if (!is.null(parts_loc)) {
+    loc$partind = map_loc_to_parent_loc(loc, parts_loc)
+  } else if (has_col(sent_loc,"partind")) {
+    loc$partind = sent_loc$partind[loc$sentence]
+  } else {
+    loc$partind = NA_integer_
+  }
+
+  # Let us find the closest preceding table reference
+  loc$prev_tab_row = cumsum(loc$reftype=="tab")
+  loc$prev_fig_row = cumsum(loc$reftype=="fig")
+  loc = loc %>%
+    group_by(prev_tab_row) %>%
+    mutate(
+      prev_tabid = ifelse(prev_tab_row == 0, NA_character_, first(id)),
+      prev_tab_sentence = ifelse(prev_tab_row == 0, NA_integer_, first(sentence)),
+      prev_tab_partind = ifelse(prev_tab_row == 0, NA_integer_, first(partind)),
+      prev_tab_start = ifelse(prev_tab_row == 0, NA_integer_, first(start))
+    ) %>%
+    ungroup()
+
+  tab_ref = filter(loc, reftype=="tab") %>%
+    select(start, end,reftype, tabid = id, sentence, partind, str)
+
+  fig_ref = filter(loc, reftype=="fig") %>%
+    select(start, end,reftype, figid = id, sentence, partind, str)
+
+  col_ref = filter(loc, reftype %in% c("col","cols")) %>%
+    mutate(tab_sent_dist = abs(prev_tab_sentence - sentence), tab_char_dist = abs(start-prev_tab_start)) %>%
+    select(start, end,reftype, col, tabid = prev_tabid,  sentence, partind,  tab_char_dist, tab_sent_dist, tab_sentence = prev_tab_sentence, tab_partind=prev_tab_partind, str)
+
+  if (NROW(col_ref)==0) {
+    col_ref$tabid = character(0)
+  }
+
+  list(tab_ref=tab_ref, fig_ref=fig_ref, col_ref=col_ref)
+}
+
+
+locate_tab_fig_refs_in_txt = function(txt) {
+  restore.point("locate_tab_fig_refs_in_txt")
+  tab_fig_loc = stri_locate_all_regex(txt,"(([Aa]ppendix )?(([tT]able)|([fF]igure)) (([ABCDEFGHIJKLM][0-9]*)|([1-9][0-9]*)))(([. ?\\:][0-9]*)|([-]?[a-zA-Z0-9][. ?\\:]))",omit_no_match = TRUE)[[1]]
+
+
+  tab_fig_df = loc_to_df(txt, tab_fig_loc) %>%
+    mutate(
+      type = ifelse(has.substr(str, "able"),"tab","fig"),
+      typeid = ifelse(type=="tab", str.right.of(str, "able "), str.right.of(str,"igure ")) %>% trimws() %>% gsub("\\.$","",.,fixed=FALSE)
+    ) %>%
+    mutate(
+      typeid = ifelse(startsWith(tolower(str),"a"),paste0("App.", typeid),typeid)
+    )
+
+  # Otherwise we get errors as, class is not ste correctly
+  tab_fig_df = ensure_empty_types(tab_fig_df, c("type","typeid","tabid"), "character")
+  tab_fig_df
+}
+
+
+
+locate_sentences_in_txt = function(txt) {
   loc = stringi::stri_locate_all_boundaries(txt,type="sentence")[[1]]
   df = loc_to_df(txt,loc)
 
@@ -50,7 +199,7 @@ sentences_merge_with_next = function(df, merge_rows) {
   df
 }
 
-rdoc_locate_col_refs = function(txt) {
+locate_col_refs_in_txt = function(txt) {
   col1_loc = stri_locate_all_regex(txt,"[Cc]olumn ((\\([0-9]+\\))|([0-9]+))",omit_no_match = TRUE)[[1]]
 
   col1_df = loc_to_df(txt,col1_loc) %>%
@@ -203,10 +352,6 @@ loc_to_df = function(txt,loc, add.left=0, add.right=0) {
 }
 
 
-
-
-
-
 map_loc_to_parent_loc = function(loc, ploc, just.start=TRUE) {
   restore.point("map_loc_to_parent_loc")
   if (just.start) {
@@ -216,27 +361,5 @@ map_loc_to_parent_loc = function(loc, ploc, just.start=TRUE) {
     end = findInterval(loc$end, ploc$start)
     return(tibble(start_ind=start, end_ind=end))
   }
-}
-
-
-
-rdoc_locate_tab_fig_refs = function(txt) {
-  #tab_fig_loc = stri_locate_all_regex(txt,"((([tT]able)|([fF]igure)) (([ABCDEFGHIJKLM][0-9]*)|([1-9][0-9]*)))(([. ?\\:][0-9]*)|([-]?[a-zA-Z0-9][. ?\\:]))",omit_no_match = TRUE)[[1]]
-
-  tab_fig_loc = stri_locate_all_regex(txt,"(([Aa]ppendix )?(([tT]able)|([fF]igure)) (([ABCDEFGHIJKLM][0-9]*)|([1-9][0-9]*)))(([. ?\\:][0-9]*)|([-]?[a-zA-Z0-9][. ?\\:]))",omit_no_match = TRUE)[[1]]
-
-
-  tab_fig_df = loc_to_df(txt, tab_fig_loc) %>%
-    mutate(
-      type = ifelse(has.substr(str, "able"),"tab","fig"),
-      typeid = ifelse(type=="tab", str.right.of(str, "able "), str.right.of(str,"igure ")) %>% trimws() %>% gsub("\\.$","",.,fixed=FALSE)
-    ) %>%
-    mutate(
-      typeid = ifelse(startsWith(tolower(str),"a"),paste0("App.", typeid),typeid)
-    )
-
-  # Otherwise we get errors as, class is not ste correctly
-  tab_fig_df = ensure_empty_types(tab_fig_df, c("type","typeid","tabid"), "character")
-  tab_fig_df
 }
 
