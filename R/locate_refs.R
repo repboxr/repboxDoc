@@ -27,7 +27,7 @@ rdoc_tab_ref_text = function(doc_dir,tabid=NULL, ref_li = rdoc_load_ref_li(doc_d
   }
   partinds = sort(partinds)
   txt = part_df$text[partinds]
-  add_sep = is.true(lead(partinds)==partinds+1)
+  add_sep = is.true(lead(partinds)!=partinds+1 & !is.na(lead(partinds)))
   txt[add_sep] = paste0(txt[add_sep], sep_str)
 
   tibble(tabid=tabid, num_refs = length(org_partinds), num_parts = length(partinds), parts_pre = parts_pre, parts_post=parts_post, text =  paste0(txt, collapse="\n"))

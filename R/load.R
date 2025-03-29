@@ -95,8 +95,6 @@ doc_dir_to_artid = function(doc_dir) {
   basename(dirname(dirname(doc_dir)))
 }
 
-
-
 rdoc_pdf_file = function(doc_dir, full.names=TRUE) {
   pdf_dir = file.path(doc_dir,"pdf")
   list.files(pdf_dir, glob2rx("*.pdf"),full.names = full.names)

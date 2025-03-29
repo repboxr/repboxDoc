@@ -76,7 +76,7 @@ rdoc_mocr_process = function(doc_dir, ...) {
   #tab_html = cells_to_tabhtml(bind_rows(tab_df$cell_df))$tab_html
   tab_html = tab_df$tabhtml
   rai_write_all_tables_html(tab_df,file.path(doc_dir, "tabs.html"))
-  writeUtf8(tab_html, file.path(doc_dir, "tabs.html"))
+  #writeUtf8(tab_html, file.path(doc_dir, "tabs.html"))
   #rstudioapi::filesPaneNavigate(doc_dir)
 
   return(invisible(list(ocr=ocr, page_df=page_df, tab_df=tab_df)))
@@ -173,8 +173,17 @@ mocr_html_extract_tables = function(html) {
       title_dist = start-title_start
     )
 
+
   tab_df = pos_df %>%
     filter(type=="tab") %>%
+    mutate(
+      tabname = tabtitle_to_tabname(tabtitle),
+      tabid = tabname_to_tabid(tabname)
+    ) %>%
+    mutate(merge_above = merge_above |
+      is.true(lag(tabid)==tabid) |
+      (is.true(has.substr(tabtitle, "ontinue") | is.na(tabtitle)) & is.true(start-lag(end) < 300))
+    ) %>%
     mutate(raw_tabhtml = stri_sub(txt, start, end) %>%
              stri_replace_all_fixed("\u2003", "")
     ) %>%

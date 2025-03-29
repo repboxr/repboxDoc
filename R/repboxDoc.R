@@ -4,9 +4,11 @@ example = function() {
   doc_dir = "~/repbox/projects_share/aeri_1_2_6/doc/app1_pdf"
   doc_dir = "~/repbox/projects_share/aeri_1_2_6/doc/art_mocr"
   doc_dir = "~/repbox/projects_share/aeri_1_2_6/doc/app1_mocr"
-  doc_dir = "~/repbox/projects_share/ecta_84_2_6/doc/art_mocr"
   project_dir = "/home/rstudio/repbox/projects_share//pandp_108_1_111"
+
+  project_dir = "~/repbox/projects_share/ecta_84_2_6"
   repbox_process_all_docs(project_dir, just_doc_form = "mocr")
+  rstudioapi::filesPaneNavigate(project_dir)
 
   rdoc_process(doc_dir)
   rstudioapi::filesPaneNavigate(doc_dir)
