@@ -1,6 +1,8 @@
 example = function() {
+  liberar(repboxDoc)
   project_dir = "~/repbox/projects_share/aejapp_1_2_4"
   project_dir = "~/repbox/projects_share/aeri_1_2_6"
+  project_dir = "~/repbox/projects_share/qje_3036349"
 
   repbox_process_all_docs(project_dir, just_doc_form = "mocr")
 
@@ -186,8 +188,12 @@ mocr_html_extract_tables = function(html) {
     ) %>%
     mutate(raw_tabhtml = stri_sub(txt, start, end) %>%
              stri_replace_all_fixed("\u2003", "")
-    ) %>%
-    mutate(tabhtml = sapply(raw_tabhtml,html_table_add_cellnum_row_col)) %>%
+    )
+
+  tab_df = tab_df %>%
+    mutate(tabhtml = sapply(seq_along(raw_tabhtml),function(i) {
+      html_table_add_cellnum_row_col(raw_tabhtml[i], tabid=tabid[i])
+    })) %>%
     mutate(parent_row = cumsum(1L-merge_above)) %>%
     mutate(cell_df = lapply(tabhtml, normalized_html_tab_to_cell_df)) %>%
     group_by(parent_row) %>%
