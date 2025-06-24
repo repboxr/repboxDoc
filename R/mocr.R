@@ -328,3 +328,91 @@ mocr_parse_html_parts = function(page_df, journ=NULL) {
   df = html_text_part_df_standardize(df)
   df
 }
+
+example_mocr_make = function() {
+  # Can run as an rstudio job
+
+  library(repboxDoc)
+  library(rmistral)
+  library(repboxAI)
+  project_dirs = list.dirs("~/repbox/projects_share",recursive = FALSE)
+
+  project_dirs = list.dirs("~/repbox/projects_gha",recursive = FALSE)
+
+  project_dirs = "/home/rstudio/repbox/projects_gha_new/aejapp_1_2_4"
+
+  set_mistral_api_key(file = "~/repbox/gemini/mistral_api_key.txt")
+  mod_df = rmistral::mistral_list_models()
+
+  project_dir = project_dirs[1]
+  for (project_dir in project_dirs) {
+    doc_dirs = repbox_doc_dirs(project_dir, "pdf")
+    doc_dir = doc_dirs[1]
+    for (doc_dir in doc_dirs) {
+      mocr_make_ocr(project_dir, doc_dir)
+    }
+  }
+
+
+
+}
+
+mocr_make_ocr = function(project_dir, doc_dir) {
+  restore.point("mocr_make_ocr")
+  artid = basename(project_dir)
+  doc_type = rdoc_type(doc_dir)
+  pdf_file = rdoc_pdf_file(doc_dir)
+  #if (!isTRUE(file.exists(pdf_file))) return(NULL)
+
+  tmp_pdf_file = "~/web/repbox_temp/temp_art.pdf"
+  file.copy(pdf_file,tmp_pdf_file,overwrite = TRUE)
+  url = "https://econ.mathematik.uni-ulm.de/repbox_temp/temp_art.pdf"
+  cat(paste0("\nAttempt mistral ocr for ", artid," ", basename(doc_dir), " ... "))
+  ocr = try(mistral_ocr(url,timeout_sec = 180,include_images = TRUE))
+  if (is(ocr, "try-error")) return(NULL)
+  if (mistral_is_ok(ocr) & isTRUE(NROW(ocr$pages)>0)) {
+    outdir = file.path(dirname(doc_dir), paste0(doc_type, "_mocr"))
+    if (!dir.exists(outdir)) dir.create(outdir, recursive = TRUE)
+    outfile = file.path(outdir, "ocr.Rds")
+    saveRDS(ocr, outfile)
+    cat("ok: ", NROW(ocr$pages), " pages.\n")
+    mocr_copy_to_ejs(project_dir)
+  } else {
+    cat(" not ok.\n")
+  }
+}
+
+mocr_copy_to_ejs = function(project_dir, overwrite=FALSE) {
+  library(EconJournalScrap)
+  doc_dirs = repbox_doc_dirs(project_dir, doc_form = "mocr", doc_type="art")
+  if (length(doc_dirs)<1) return()
+
+  artid = basename(project_dir)
+  journ = ejs_artid_to_journ(artid)
+  doc_dir = doc_dirs[1]
+  for (doc_dir in doc_dirs) {
+
+    dest_dir =  file.path("~/ejd_files", basename(doc_dir), journ)
+    dest_file = file.path(dest_dir, paste0(artid, ".Rds"))
+    if (file.exists(dest_file) & !overwrite) next
+    if (!dir.exists(dest_dir)) dir.create(dest_dir)
+
+    source_file = file.path(doc_dir, "ocr.Rds")
+    file.copy(source_file, dest_file)
+  }
+}
+
+repair_ejd_files_art_mocr = function() {
+  files = list.files("~/ejd_files/art_mocr", glob2rx("*.Rds"),full.names = TRUE)
+  artids = basename(files) %>% tools::file_path_sans_ext()
+  journs = ejs_artid_to_journ(artids)
+  new_files = file.path(dirname(files), journs, basename(files))
+  dirs = unique(dirname(new_files))
+  for (dir in dirs) {
+    dir.create(dir)
+  }
+  for (i in seq_along(files)) {
+    file.rename(files[i], new_files[i])
+  }
+}
+

@@ -5,8 +5,8 @@ example = function() {
     rdoc_init_from_art(project_dir)
   }
   rstudioapi::filesPaneNavigate(project_dir)
-}
 
+}
 
 rdoc_init_from_art = function(project_dir) {
   pdf_file = repboxArt::art_get_pdf_files(project_dir)
