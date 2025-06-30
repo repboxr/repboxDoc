@@ -80,9 +80,10 @@ rdoc_process = function(doc_dir, steps= rdoc_steps_from(TRUE), opts = rdoc_optio
 
 rdoc_is_processed = function(doc_dir) {
   doc_form = rdoc_form(doc_dir)
-  if (doc_form %in% c("pdf","html")) {
-    return(file.exists(file.path(doc_dir, "text_parts.Rds")))
+  if (doc_form %in% c("pdf","html","mocr")) {
+    return(file.exists(file.path(doc_dir, "part_df.Rds")))
   }
+
   restore.point("rdoc_is_processed")
   stop(paste0("Documents of form ", doc_form, " are not yet implemented."))
 
