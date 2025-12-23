@@ -140,7 +140,8 @@ mocr_md_to_html_by_page = function(doc_dir, ocr) {
 mocr_html_extract_tables = function(html) {
   restore.point("mocr_html_extract_tables")
   txt = html
-  library(repboxArt)
+  #library(repboxArt)
+  library(repboxTableTools)
 
   # Find table positions
   pattern <- "(?s)(<table\\b[^>]*>.*?</table>)"
@@ -190,6 +191,8 @@ mocr_html_extract_tables = function(html) {
              stri_replace_all_fixed("\u2003", "")
     )
 
+  #tab_df = tab_df[1,]
+
   tab_df = tab_df %>%
     mutate(tabhtml = sapply(seq_along(raw_tabhtml),function(i) {
       html_table_add_cellnum_row_col(raw_tabhtml[i], tabid=tabid[i])
@@ -228,7 +231,11 @@ mocr_html_extract_tables = function(html) {
     )
   for (i in 1:NROW(tab_df$cell_df)) {
     tab_df$cell_df[[i]]$tabid = tab_df$tabid[[i]]
+    tab_df$cell_df[[i]]$cellid = paste0("c", tab_df$tabid[[i]],"_", seq_len(NROW(tab_df$cell_df[[i]])))
   }
+
+  # remove tables without tabid
+  tab_df = tab_df %>% filter(!is.na(tabid))
 
   # Correct tables
   tab_df$cell_df = lapply(tab_df$cell_df, function(cell_df) {
