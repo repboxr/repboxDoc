@@ -2,16 +2,6 @@
 # text parts with sections
 # as stored from HTML file
 
-example = function() {
-  library(repbox)
-  library(repboxArt)
-  doc_dir = "~/repbox/projects_reg/aejapp_2_4_8"
-  doc_dir = "~/repbox/projects_reg/aejapp_3_1_3"
-
-  rdoc_extract_raw_tabs(doc_dir,overwrite = TRUE)
-  rdoc_pdf_pages_to_parts(doc_dir)
-  rstudioapi::filesPaneNavigate(doc_dir)
-}
 
 rdoc_pdf_pages_to_parts = function(doc_dir, journ = rdoc_guess_journ(doc_dir), verbose=TRUE, opts=rdoc_opts(), page_df = NULL, tab_df = NULL, cache=NULL) {
   restore.point("rdoc_pdf_pages_to_parts")

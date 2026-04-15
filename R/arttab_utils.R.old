@@ -1,0 +1,31 @@
+
+find_stars_str = function(big_str) {
+  restore.point("find_stars_str")
+  if (length(big_str)==0) return(NULL)
+  digit_pos = stringi::stri_locate_last_regex(big_str, "[0-9]")[,1]
+  digit_pos[is.na(digit_pos)] = 0
+  right_str =  substring(big_str,digit_pos+1)
+  right_str = gsub(" ", "", right_str)
+  as.vector(stringi::stri_match_first_regex(right_str, "[*]+")) %>% na.val("")
+}
+
+
+tabname_to_tabid = function(tabname) {
+  restore.point("tabname_to_tabid")
+  tabid = str.right.of(tabname, "able ") %>% trimws()
+  tabid = gsub("\\.$","",tabid) %>% trimws()
+
+  rows = which(startsWith(tolower(tabname),"appendix"))
+  tabid[rows] = paste0("app.",tabid[rows])
+
+  # Update: remove spaces and other special letter
+  # We will later use tabid inside HTML ids: so it should
+  # not have any special symbols anymore
+  tabid = stringi::stri_replace_all_regex(tabid, "[^a-zA-Z0-9_]","")
+  tabid = stringi::stri_replace_all_fixed(tabid, "TABLE","")
+  tabid
+}
+
+tabtitle_to_tabid = function(tabtitle) {
+  tabname_to_tabid(tabtitle)
+}

@@ -28,7 +28,7 @@ rdoc_phrase_analysis = function(doc_dir, cache=NULL) {
   if (NROW(tt_df)==0 & NROW(coty_df)==0) return(parcels)
 
   library(repboxDB)
-  specs = repdb_load_specs(libs="repboxArt")
+  #specs = repdb_load_specs(libs="repboxArt")
   artid = basename(doc_dir)
 
   tt_df$artid = artid
@@ -245,7 +245,7 @@ txt_locate_rx_keywords = function(txt, rx, left_space=FALSE, right_space=FALSE) 
 # Keywords with index
 txt_locate_typed_keywords = function(txt, keywords) {
   if (missing(keywords)) {
-    keywords = jsonlite::fromJSON(readLines(warn = FALSE,system.file("keywords/keywords.json", package="repboxArt")))
+    keywords = jsonlite::fromJSON(readLines(warn = FALSE,system.file("keywords/keywords.json", package="repboxDoc")))
 
   }
   restore.point("txt_locate_keywords")
@@ -281,7 +281,7 @@ text_parts_to_loc = function(nchars = nchar(prdoc_txt),collapse_nchar=1) {
 
 make_phrases_def = function() {
   restore.point("rdoc_make_phrases_def")
-  dir = system.file("keywords", package="repboxArt")
+  dir = system.file("keywords", package="repboxDoc")
 
   keywords = jsonlite::fromJSON(readLines(warn = FALSE,file.path(dir,"keywords.json")))
 
@@ -360,7 +360,7 @@ make_phrases_def = function() {
 }
 
 load_phrases_def = function() {
-  dir = system.file("keywords", package="repboxArt")
+  dir = system.file("keywords", package="repboxDoc")
   p_def = readRDS(file.path(dir,"phrases_def.Rds"))
   options(repbox.art.text.phrases.def = p_def)
   p_def

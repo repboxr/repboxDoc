@@ -1,0 +1,128 @@
+# Here we specify keywords for different table types
+
+# Tables showing descriptive statistics
+descr:
+  label: "Descriptive Statistics"
+  ref_max_dist: 0
+  all:
+    .self: ["descriptive","summary","summary statistics", "descriptive statistics"]
+  table:
+    .self: [" Min ","Mean "," Max "," SD ", " Median "]
+
+simulation:
+  label: "Simulation"
+  ref_max_dist: 0
+  all:
+    simulation: ["simulation","simulate"]
+    .self: ["counterfactual"]
+
+# Keywords for tab type reg
+reg:
+  label: "Regression"
+  all:
+    "regression": ["regress"]
+    "depvar": [" dependent variable"]
+    "estimate": ["estimation","estimate","estimating"]
+    "fixed effects": ["fixed effects","fixed-effects", " FE "]
+    rdd:  [" RD ","RDD","regression discontinuity"]
+    did: ["difference-in-difference"," DID ","DiD"," DD ",
+      "difference in difference","differences-in-difference"]
+    "iv": ["IV", "instrumental variable"," instrument"]
+    "tsls": ["two-stage least squares","2SLS","TSLS"]
+    se_parentheses: ["tandard errors in parentheses"]
+    .self: ["OLS","poisson","probit","logit","Cloglog",]
+  not_title:
+    "clustered": ["clustered","cluster-robust","cluster robust"]
+    "r2": ["r-squared","r squared"]
+
+falsification:
+  label: "Falsification Tests"
+  ref_max_dist: 0
+  all:
+    "falsification": ["falsification check","falsification test"]
+
+placebo:
+  label: "Placebo Tests"
+  ref_max_dist: 0
+  all:
+    "placebo": ["placebo"]
+
+
+robustness:
+  label: "Robustness Checks"
+  ref_max_dist: 0
+  all:
+    "robustness": ["robustness"]
+
+main_results:
+  label: "Main Results"
+  ref_max_dist: 0
+  all:
+    "main results": ["main result"]
+
+
+
+# We search for keywords related to causal effect estimation only
+# directly within the
+causal:
+  label: "Causal Effect"
+  ref_max_dist: 0
+  all:
+    causal: ["causal"]
+    effect: ["effect"]
+
+
+rubin:
+  label: "Potential Outcomes"
+  all:
+    ATE: [" ATE ","average treatment effect"]
+    LATE: [" LATE ", "local average treatment effect"]
+    ATT: [" ATT ", "treatment effect on the treated"]
+    CATE: [" CATE ", "conditional average treatment effect"]
+
+rdd:
+  label: "RDD"
+  all:
+    rdd:  [" RD "," RDD ","regression discontinuity", "regression discontinuities"]
+    bandwith: ["bandwith", "window size"]
+    "window size": ["window size"]
+    threshold: ["threshold"]
+    "local polynom": ["local polynomial","local polynom"]
+    "polynom": ["third-order polynom","second-order polynom", "polynomial terms"]
+
+synthetic_control:
+  label: "Synthetic Control"
+  all:
+    "synthetic control": ["synthetic control"]
+
+did:
+  label: "Difference-in-Differences"
+  all:
+    did: ["difference-in-difference"," DID ","DiD"," DD ",
+      "difference in difference","differences-in-difference"]
+
+ddd:
+  label: "Tripple Differences"
+  all:
+    ddd: [" DDD ", "triple difference","triple-differences", "tripple DID","tripple-DID"]
+
+iv:
+  label: "Instrumental Variable"
+  all:
+    "iv": ["IV", "instrumental variable"," instrument"]
+    "tsls": ["two-stage least squares","2SLS","TSLS"]
+
+first_stage:
+  label: "First Stage"
+  all:
+    "first stage": ["first stage"]
+
+control_function:
+  label: "Control Function"
+  all:
+    "control_function": ["control function"]
+
+marginal_effects:
+  label: "Marginal Effects"
+  all:
+    .self: ["dx/dy","marginal effect"]

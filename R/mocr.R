@@ -140,7 +140,6 @@ mocr_md_to_html_by_page = function(doc_dir, ocr) {
 mocr_html_extract_tables = function(html) {
   restore.point("mocr_html_extract_tables")
   txt = html
-  #library(repboxArt)
   library(repboxTableTools)
 
   # Find table positions
